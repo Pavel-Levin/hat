@@ -31,10 +31,14 @@ def _device_class(metric: MetricDef):
 
 
 def _state_class(metric: MetricDef):
-    if metric.unit in ("kWh", "h") and (
-        "today" in metric.key or "total" in metric.key
-    ):
-        return SensorStateClass.TOTAL_INCREASING
+    if metric.unit in ("kWh", "h"):
+        # Daily counters reset, so TOTAL_INCREASING is appropriate.
+        if "today" in metric.key:
+            return SensorStateClass.TOTAL_INCREASING
+        # Lifetime meters do not normally reset. Home Assistant recommends
+        # TOTAL without last_reset for these cumulative energy counters.
+        if "total" in metric.key:
+            return SensorStateClass.TOTAL
     if metric.unit in ("V", "A", "W", "Hz", "°C", "%", "Ah"):
         return SensorStateClass.MEASUREMENT
     return None
