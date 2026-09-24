@@ -119,6 +119,7 @@ class DeyeRegisterSensor(SensorEntity):
             "register": self.metric.reg,
             "group": self.metric.group,
             "gateway_id": self.device_id,
+            "metric_key": self.metric.key,
         }
         if self.metric.high_reg is not None:
             attrs["high_register"] = self.metric.high_reg
