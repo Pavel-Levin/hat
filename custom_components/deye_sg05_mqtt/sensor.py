@@ -12,6 +12,9 @@ from .const import DOMAIN, MANUFACTURER, MODEL
 from .mqtt_client import DeyeMqttClient
 from .register_map import METRICS, MetricDef
 
+_METRICS_BY_KEY = {metric.key: metric for metric in METRICS}
+_PV_POWER_KEYS = ("pv1_w", "pv2_w", "pv3_w", "pv4_w")
+
 
 def _device_class(metric: MetricDef):
     if metric.key.endswith("_soc_pct"):
@@ -44,8 +47,21 @@ def _entity_category(metric: MetricDef):
 
 
 def _is_microinverter_metric(metric: MetricDef) -> bool:
-    """Return True for measurements belonging to the GEN/microinverter input."""
     return metric.key.startswith("gen_port_")
+
+
+def _main_device_info(client: DeyeMqttClient, device_id: str) -> DeviceInfo:
+    hello = client.devices.get(device_id).hello if device_id in client.devices else {}
+    mac = str(hello.get("mac", "")).strip() or device_id.rsplit("-", 1)[-1]
+    short_id = device_id.removeprefix("id-nsg-v0.1-")
+    return DeviceInfo(
+        identifiers={(DOMAIN, device_id)},
+        connections={("mac", mac)} if len(mac) == 12 else set(),
+        manufacturer=MANUFACTURER,
+        model=MODEL,
+        name=f"Deye {MODEL} [{short_id}]",
+        sw_version=hello.get("fw"),
+    )
 
 
 async def async_setup_entry(
@@ -62,9 +78,12 @@ async def async_setup_entry(
         if device_id in added_devices:
             return
         added_devices.add(device_id)
-        async_add_entities(
-            DeyeRegisterSensor(client, device_id, metric) for metric in METRICS
-        )
+        entities = [
+            DeyeRegisterSensor(client, device_id, metric)
+            for metric in METRICS
+        ]
+        entities.append(DeyePvTotalPowerSensor(client, device_id))
+        async_add_entities(entities)
 
     for device_id in tuple(client.devices):
         add_device(device_id)
@@ -95,11 +114,8 @@ class DeyeRegisterSensor(SensorEntity):
         self._attr_state_class = _state_class(metric)
         self._attr_entity_category = _entity_category(metric)
 
-        hello = client.devices.get(device_id).hello if device_id in client.devices else {}
-        mac = str(hello.get("mac", "")).strip() or device_id.rsplit("-", 1)[-1]
-        short_id = device_id.removeprefix("id-nsg-v0.1-")
-
         if _is_microinverter_metric(metric):
+            short_id = device_id.removeprefix("id-nsg-v0.1-")
             self._attr_device_info = DeviceInfo(
                 identifiers={(DOMAIN, f"{device_id}_microinverter")},
                 manufacturer="Deye GEN interface",
@@ -108,14 +124,7 @@ class DeyeRegisterSensor(SensorEntity):
                 via_device=(DOMAIN, device_id),
             )
         else:
-            self._attr_device_info = DeviceInfo(
-                identifiers={(DOMAIN, device_id)},
-                connections={("mac", mac)} if len(mac) == 12 else set(),
-                manufacturer=MANUFACTURER,
-                model=MODEL,
-                name=f"Deye {MODEL} [{short_id}]",
-                sw_version=hello.get("fw"),
-            )
+            self._attr_device_info = _main_device_info(client, device_id)
 
     @property
     def native_value(self):
@@ -144,9 +153,56 @@ class DeyeRegisterSensor(SensorEntity):
 
     async def async_added_to_hass(self) -> None:
         self.async_on_remove(
-            self.client.add_update_listener(
-                self.device_id, self._handle_update
-            )
+            self.client.add_update_listener(self.device_id, self._handle_update)
+        )
+
+    @callback
+    def _handle_update(self) -> None:
+        self.async_write_ha_state()
+
+
+class DeyePvTotalPowerSensor(SensorEntity):
+    """Computed total DC PV power (PV1 + PV2 + PV3 + PV4)."""
+
+    _attr_should_poll = False
+    _attr_has_entity_name = True
+    _attr_name = "PV общая мощность"
+    _attr_device_class = SensorDeviceClass.POWER
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "W"
+    _attr_icon = "mdi:solar-power"
+
+    def __init__(self, client: DeyeMqttClient, device_id: str) -> None:
+        self.client = client
+        self.device_id = device_id
+        self._attr_unique_id = f"{device_id}_pv_total_w"
+        self._attr_device_info = _main_device_info(client, device_id)
+
+    @property
+    def native_value(self):
+        values = [
+            self.client.metric_value(self.device_id, _METRICS_BY_KEY[key])
+            for key in _PV_POWER_KEYS
+        ]
+        if all(value is None for value in values):
+            return None
+        return sum(float(value or 0) for value in values)
+
+    @property
+    def available(self) -> bool:
+        return self.client.device_available(self.device_id) and self.native_value is not None
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "gateway_id": self.device_id,
+            "metric_key": "pv_total_w",
+            "group": "pv",
+        }
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(
+            self.client.add_update_listener(self.device_id, self._handle_update)
         )
 
     @callback
