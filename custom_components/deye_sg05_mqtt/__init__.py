@@ -15,10 +15,11 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from .const import CONF_BROKER, CONF_PORT, DOMAIN
 from .mqtt_client import DeyeMqttClient, async_test_connection
 
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [Platform.SENSOR, Platform.BUTTON]
 
 PANEL_URL_PATH = "deye-sg05-dashboard"
-PANEL_MODULE_URL = "/deye_sg05_mqtt/panel.js"
+PANEL_STATIC_PATH = "/deye_sg05_mqtt/panel.js"
+PANEL_MODULE_URL = "/deye_sg05_mqtt/panel.js?v=0.4.0"
 PANEL_DATA_KEY = f"{DOMAIN}_panel_registered"
 
 
@@ -29,7 +30,7 @@ async def _async_register_dashboard(hass: HomeAssistant) -> None:
 
     panel_file = Path(__file__).parent / "frontend" / "panel.js"
     await hass.http.async_register_static_paths(
-        [StaticPathConfig(PANEL_MODULE_URL, str(panel_file), False)]
+        [StaticPathConfig(PANEL_STATIC_PATH, str(panel_file), False)]
     )
 
     await async_register_panel(
