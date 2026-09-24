@@ -18,7 +18,7 @@ from .register_map import MetricDef, decode_metric
 
 _LOGGER = logging.getLogger(__name__)
 _READ_TOPIC_RE = re.compile(
-    r"^(?P<device>[^/]+)/read/(?P<slave>\d+)/(?P<reg>\d+)/(?P<count>\d+)$"
+    r"^(?P<device>[^/]+)/read/(?P<slave>\d+)/(?P<reg>\d+)/(?P<count>\d+)/?$"
 )
 
 
@@ -119,13 +119,17 @@ class DeyeMqttClient:
         is_new = device_id not in self.devices
         device = self.devices.setdefault(device_id, DeyeDevice(device_id))
         if is_new:
+            _LOGGER.info("Discovered Deye MQTT gateway %s", device_id)
             for callback in tuple(self._device_listeners):
                 callback(device_id)
         return device
 
     def _notify(self, device_id: str) -> None:
         for callback in tuple(self._update_listeners.get(device_id, [])):
-            callback()
+            try:
+                callback()
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("Failed to update entity for %s", device_id)
 
     def _notify_all(self) -> None:
         for device_id in tuple(self.devices):
@@ -146,6 +150,9 @@ class DeyeMqttClient:
                     self._notify_all()
                     await client.subscribe("+/hello", qos=0)
                     await client.subscribe("+/status", qos=0)
+                    # Includes both:
+                    #   <id>/read/1/586/11
+                    #   <id>/read/data
                     await client.subscribe("+/read/#", qos=0)
 
                     async for message in client.messages:
@@ -173,14 +180,14 @@ class DeyeMqttClient:
         except (UnicodeDecodeError, json.JSONDecodeError):
             return
 
-        topic_parts = topic.split("/")
+        topic_parts = topic.strip("/").split("/")
         if not topic_parts:
             return
         device_id = topic_parts[0]
         if not device_id.startswith(DEVICE_PREFIX):
             return
 
-        if topic.endswith("/hello") and isinstance(data, dict):
+        if topic.rstrip("/").endswith("/hello") and isinstance(data, dict):
             vendor = str(data.get("vendor", "Deye"))
             if vendor.lower() != "deye" and "deye" not in str(data).lower():
                 return
@@ -190,29 +197,52 @@ class DeyeMqttClient:
             self._notify(device_id)
             return
 
-        if topic.endswith("/status") and isinstance(data, dict):
+        if topic.rstrip("/").endswith("/status") and isinstance(data, dict):
             device = self._ensure_device(device_id)
             if "online" in data:
                 device.online = bool(data["online"])
             self._notify(device_id)
             return
 
-        match = _READ_TOPIC_RE.match(topic)
-        if not match or not isinstance(data, dict):
+        if "/read/" not in topic or not isinstance(data, dict):
             return
 
+        # Prefer the register/slave carried in the JSON payload. This makes the
+        # integration work with both the per-register topic tree and the
+        # gateway's generic ".../read/data" topic.
+        match = _READ_TOPIC_RE.match(topic.strip("/"))
         try:
-            slave = int(match.group("slave"))
-            start_reg = int(data.get("reg", match.group("reg")))
-            values = data["data"]
+            if "reg" in data:
+                start_reg = int(data["reg"])
+            elif match:
+                start_reg = int(match.group("reg"))
+            else:
+                return
+
+            if "slave" in data:
+                slave = int(data["slave"])
+            elif match:
+                slave = int(match.group("slave"))
+            else:
+                slave = 1
+
+            values = data.get("data")
             if slave != 1 or not isinstance(values, list):
                 return
             values = [int(v) & 0xFFFF for v in values]
-        except (TypeError, ValueError, KeyError):
+        except (TypeError, ValueError):
             return
 
         device = self._ensure_device(device_id)
         for offset, value in enumerate(values):
             device.registers[start_reg + offset] = value
         device.online = True
+
+        _LOGGER.debug(
+            "Deye %s: cached registers %s..%s from %s",
+            device_id,
+            start_reg,
+            start_reg + len(values) - 1,
+            topic,
+        )
         self._notify(device_id)
