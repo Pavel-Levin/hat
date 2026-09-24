@@ -43,6 +43,11 @@ def _entity_category(metric: MetricDef):
     return None
 
 
+def _is_microinverter_metric(metric: MetricDef) -> bool:
+    """Return True for measurements belonging to the GEN/microinverter input."""
+    return metric.key.startswith("gen_port_")
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -93,14 +98,24 @@ class DeyeRegisterSensor(SensorEntity):
         hello = client.devices.get(device_id).hello if device_id in client.devices else {}
         mac = str(hello.get("mac", "")).strip() or device_id.rsplit("-", 1)[-1]
         short_id = device_id.removeprefix("id-nsg-v0.1-")
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, device_id)},
-            connections={("mac", mac)} if len(mac) == 12 else set(),
-            manufacturer=MANUFACTURER,
-            model=MODEL,
-            name=f"Deye {MODEL} [{short_id}]",
-            sw_version=hello.get("fw"),
-        )
+
+        if _is_microinverter_metric(metric):
+            self._attr_device_info = DeviceInfo(
+                identifiers={(DOMAIN, f"{device_id}_microinverter")},
+                manufacturer="Deye GEN interface",
+                model="External microinverter on GEN port",
+                name=f"Microinverter (GEN) [{short_id}]",
+                via_device=(DOMAIN, device_id),
+            )
+        else:
+            self._attr_device_info = DeviceInfo(
+                identifiers={(DOMAIN, device_id)},
+                connections={("mac", mac)} if len(mac) == 12 else set(),
+                manufacturer=MANUFACTURER,
+                model=MODEL,
+                name=f"Deye {MODEL} [{short_id}]",
+                sw_version=hello.get("fw"),
+            )
 
     @property
     def native_value(self):
@@ -121,6 +136,8 @@ class DeyeRegisterSensor(SensorEntity):
             "gateway_id": self.device_id,
             "metric_key": self.metric.key,
         }
+        if _is_microinverter_metric(self.metric):
+            attrs["energy_role"] = "microinverter_gen"
         if self.metric.high_reg is not None:
             attrs["high_register"] = self.metric.high_reg
         return attrs
