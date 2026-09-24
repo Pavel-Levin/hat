@@ -92,12 +92,13 @@ class DeyeRegisterSensor(SensorEntity):
 
         hello = client.devices.get(device_id).hello if device_id in client.devices else {}
         mac = str(hello.get("mac", "")).strip() or device_id.rsplit("-", 1)[-1]
+        short_id = device_id.removeprefix("id-nsg-v0.1-")
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, device_id)},
             connections={("mac", mac)} if len(mac) == 12 else set(),
             manufacturer=MANUFACTURER,
             model=MODEL,
-            name=f"Deye {MODEL}",
+            name=f"Deye {MODEL} [{short_id}]",
             sw_version=hello.get("fw"),
         )
 
@@ -114,7 +115,11 @@ class DeyeRegisterSensor(SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        attrs = {"register": self.metric.reg, "group": self.metric.group}
+        attrs = {
+            "register": self.metric.reg,
+            "group": self.metric.group,
+            "gateway_id": self.device_id,
+        }
         if self.metric.high_reg is not None:
             attrs["high_register"] = self.metric.high_reg
         return attrs
