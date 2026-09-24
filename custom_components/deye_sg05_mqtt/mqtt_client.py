@@ -17,8 +17,8 @@ from .const import DEVICE_PREFIX
 from .register_map import MetricDef, decode_metric
 
 _LOGGER = logging.getLogger(__name__)
-_READ_TOPIC_RE = re.compile(
-    r"^(?P<device>[^/]+)/read/(?P<slave>\d+)/(?P<reg>\d+)/(?P<count>\d+)/?$"
+_REGISTER_TOPIC_RE = re.compile(
+    r"^(?P<device>[^/]+)/(?P<root>read|modbus)/(?P<slave>\d+)/(?P<reg>\d+)/(?P<count>\d+)/?$"
 )
 
 
@@ -148,11 +148,16 @@ class DeyeMqttClient:
                     self.connected = True
                     delay = 2
                     self._notify_all()
+
                     await client.subscribe("+/hello", qos=0)
                     await client.subscribe("+/status", qos=0)
-                    # Includes both:
-                    #   <id>/read/1/586/11
-                    #   <id>/read/data
+
+                    # Current gateway firmware publishes raw Modbus data under:
+                    #   <id>/modbus/data
+                    #   <id>/modbus/1/586/11
+                    #
+                    # Keep legacy "read" subscriptions too for compatibility.
+                    await client.subscribe("+/modbus/#", qos=0)
                     await client.subscribe("+/read/#", qos=0)
 
                     async for message in client.messages:
@@ -180,14 +185,16 @@ class DeyeMqttClient:
         except (UnicodeDecodeError, json.JSONDecodeError):
             return
 
-        topic_parts = topic.strip("/").split("/")
+        clean_topic = topic.strip("/")
+        topic_parts = clean_topic.split("/")
         if not topic_parts:
             return
+
         device_id = topic_parts[0]
         if not device_id.startswith(DEVICE_PREFIX):
             return
 
-        if topic.rstrip("/").endswith("/hello") and isinstance(data, dict):
+        if clean_topic.endswith("/hello") and isinstance(data, dict):
             vendor = str(data.get("vendor", "Deye"))
             if vendor.lower() != "deye" and "deye" not in str(data).lower():
                 return
@@ -197,21 +204,24 @@ class DeyeMqttClient:
             self._notify(device_id)
             return
 
-        if topic.rstrip("/").endswith("/status") and isinstance(data, dict):
+        if clean_topic.endswith("/status") and isinstance(data, dict):
             device = self._ensure_device(device_id)
             if "online" in data:
                 device.online = bool(data["online"])
             self._notify(device_id)
             return
 
-        if "/read/" not in topic or not isinstance(data, dict):
+        if not isinstance(data, dict):
             return
 
-        # Prefer the register/slave carried in the JSON payload. This makes the
-        # integration work with both the per-register topic tree and the
-        # gateway's generic ".../read/data" topic.
-        match = _READ_TOPIC_RE.match(topic.strip("/"))
+        # Only decode raw register payloads from the Modbus/read branches.
+        if "/modbus/" not in clean_topic and "/read/" not in clean_topic:
+            return
+
+        match = _REGISTER_TOPIC_RE.match(clean_topic)
+
         try:
+            # The generic ".../modbus/data" topic carries reg/slave in JSON.
             if "reg" in data:
                 start_reg = int(data["reg"])
             elif match:
@@ -229,6 +239,7 @@ class DeyeMqttClient:
             values = data.get("data")
             if slave != 1 or not isinstance(values, list):
                 return
+
             values = [int(v) & 0xFFFF for v in values]
         except (TypeError, ValueError):
             return
@@ -243,6 +254,6 @@ class DeyeMqttClient:
             device_id,
             start_reg,
             start_reg + len(values) - 1,
-            topic,
+            clean_topic,
         )
         self._notify(device_id)
