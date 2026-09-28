@@ -7,6 +7,7 @@ class DeyeSg05Panel extends HTMLElement {
     this._selected = null;
     this._energyMessage = "";
     this._energyBusy = false;
+    this._showDetails = false;
   }
 
   set hass(value) {
@@ -56,6 +57,21 @@ class DeyeSg05Panel extends HTMLElement {
     return this._state(idx, key)?.entity_id || null;
   }
 
+  _moreInfo(entityId) {
+    if (!entityId) return;
+    this.dispatchEvent(new CustomEvent("hass-more-info", {
+      bubbles: true,
+      composed: true,
+      detail: { entityId },
+    }));
+  }
+
+  _clickAttrs(entityId) {
+    return entityId
+      ? `data-entity="${entityId}" role="button" tabindex="0"`
+      : "";
+  }
+
   _number(idx, key) {
     const state = this._state(idx, key);
     if (!state || state.state === "unknown" || state.state === "unavailable") return null;
@@ -98,9 +114,9 @@ class DeyeSg05Panel extends HTMLElement {
       : `${sign}${Math.round(value)} W`;
   }
 
-  _card(title, value, subtitle, icon, tone = "") {
+  _card(title, value, subtitle, icon, tone = "", entityId = null) {
     return `
-      <div class="metric-card ${tone}">
+      <div class="metric-card ${tone} ${entityId ? "clickable" : ""}" ${this._clickAttrs(entityId)}>
         <div class="metric-icon">${icon}</div>
         <div class="metric-copy">
           <div class="metric-title">${title}</div>
@@ -224,6 +240,13 @@ class DeyeSg05Panel extends HTMLElement {
     const inverter = this._number(idx, "inverter_w");
     const soc = this._value(idx, "battery1_soc_pct");
 
+    const pvEntity = this._entity(idx, "pv_total_w") || this._entity(idx, "pv1_w");
+    const genEntity = this._entity(idx, "gen_port_power_w");
+    const gridEntity = this._entity(idx, "grid_w");
+    const batteryEntity = this._entity(idx, "battery1_soc_pct");
+    const loadEntity = this._entity(idx, "load_w");
+    const inverterEntity = this._entity(idx, "inverter_w");
+
     const pvClass = pv !== null && Math.abs(pv) >= 5 ? "flow-active" : "flow-idle";
     const genClass = gen !== null && Math.abs(gen) >= 5 ? "flow-active" : "flow-idle";
     const loadClass = load !== null && Math.abs(load) >= 5 ? "flow-active" : "flow-idle";
@@ -244,35 +267,35 @@ class DeyeSg05Panel extends HTMLElement {
         <div class="flow-title-row">
           <div>
             <h2>Потоки энергии</h2>
-            <div class="flow-hint">Схема в стиле Deye Cloud: инвертор в центре, источники и потребители вокруг него</div>
+            <div class="flow-hint">Нажмите на узел, чтобы открыть его информацию в Home Assistant</div>
           </div>
           <div class="inverter-badge">DEYE</div>
         </div>
 
         <div class="cloud-flow">
-          <svg class="cloud-lines" viewBox="0 0 1000 520" preserveAspectRatio="none" aria-hidden="true">
-            <path class="energy-path solar-path ${pvClass}" d="M 500 92 L 500 225" />
-            <path class="energy-path grid-path ${gridClass}" d="M 185 255 L 415 255" />
-            <path class="energy-path load-path ${loadClass}" d="M 585 255 L 815 255" />
-            <path class="energy-path battery-path ${batteryClass}" d="M 500 335 L 500 455" />
-            <path class="energy-path gen-path ${genClass}" d="M 245 430 C 300 390, 350 340, 430 300" />
+          <svg class="cloud-lines" viewBox="0 0 900 400" preserveAspectRatio="none" aria-hidden="true">
+            <path class="energy-path solar-path ${pvClass}" d="M 450 46 L 450 196" />
+            <path class="energy-path grid-path ${gridClass}" d="M 135 196 L 450 196" />
+            <path class="energy-path load-path ${loadClass}" d="M 450 196 L 765 196" />
+            <path class="energy-path battery-path ${batteryClass}" d="M 450 196 L 450 346" />
+            <path class="energy-path gen-path ${genClass}" d="M 202 336 C 285 305, 355 245, 450 196" />
           </svg>
 
-          <div class="cloud-node pv-cloud">
+          <div class="cloud-node pv-cloud clickable" ${this._clickAttrs(pvEntity)}>
             <div class="cloud-circle solar-circle">☀️</div>
             <div class="cloud-label">PV</div>
             <div class="cloud-value">${this._formatW(pv)}</div>
             <div class="cloud-sub">PV1–PV4</div>
           </div>
 
-          <div class="cloud-node grid-cloud">
+          <div class="cloud-node grid-cloud clickable" ${this._clickAttrs(gridEntity)}>
             <div class="cloud-circle grid-circle">🌐</div>
             <div class="cloud-label">Сеть</div>
             <div class="cloud-value">${this._formatSignedW(grid)}</div>
             <div class="cloud-sub">${gridState}</div>
           </div>
 
-          <div class="cloud-node inverter-cloud">
+          <div class="cloud-node inverter-cloud clickable" ${this._clickAttrs(inverterEntity)}>
             <div class="cloud-circle inverter-circle">
               <div class="inverter-symbol">⚡</div>
               <div class="inverter-brand">DEYE</div>
@@ -282,21 +305,21 @@ class DeyeSg05Panel extends HTMLElement {
             <div class="cloud-sub">${this._value(idx, "inverter_hz")}</div>
           </div>
 
-          <div class="cloud-node load-cloud">
+          <div class="cloud-node load-cloud clickable" ${this._clickAttrs(loadEntity)}>
             <div class="cloud-circle load-circle">🏠</div>
             <div class="cloud-label">Нагрузка</div>
             <div class="cloud-value">${this._formatW(load)}</div>
             <div class="cloud-sub">дом</div>
           </div>
 
-          <div class="cloud-node battery-cloud">
+          <div class="cloud-node battery-cloud clickable" ${this._clickAttrs(batteryEntity)}>
             <div class="cloud-circle battery-circle">🔋</div>
             <div class="cloud-label">Батарея</div>
             <div class="cloud-value">${soc}</div>
             <div class="cloud-sub">${batteryState} · ${this._formatSignedW(battery)}</div>
           </div>
 
-          <div class="cloud-node gen-cloud">
+          <div class="cloud-node gen-cloud clickable" ${this._clickAttrs(genEntity)}>
             <div class="cloud-circle gen-circle">🔌</div>
             <div class="cloud-label">Microinverter / GEN</div>
             <div class="cloud-value">${this._formatW(gen)}</div>
@@ -462,6 +485,7 @@ class DeyeSg05Panel extends HTMLElement {
           </div>
           <div class="actions">
             <label>Шлюз<select id="gateway">${options}</select></label>
+            <button id="details-toggle">${this._showDetails ? "▴ Скрыть детали" : "▾ Показать детали"}</button>
             <button id="energy" ${this._energyBusy ? "disabled" : ""}>⚡ Настроить Energy</button>
           </div>
         </header>
@@ -469,15 +493,16 @@ class DeyeSg05Panel extends HTMLElement {
         ${this._energyMessage ? `<div class="notice">${this._energyMessage}</div>` : ""}
 
         <section class="summary-grid">
-          ${this._card("DC PV", this._formatW(pv), "PV1–PV4", "☀️", "solar")}
-          ${this._card("Микроинвертор", this._formatW(gen), "через GEN-порт", "🔌", "gen")}
-          ${this._card("Нагрузка", this._formatW(load), "дом", "🏠", "load")}
-          ${this._card("Сеть", this._formatSignedW(grid), grid !== null ? (grid >= 0 ? "импорт" : "экспорт") : "—", "🌐", "grid")}
-          ${this._card("Батарея", this._value(idx, "battery1_soc_pct"), this._formatSignedW(battery), "🔋", "battery")}
+          ${this._card("DC PV", this._formatW(pv), "PV1–PV4", "☀️", "solar", this._entity(idx, "pv_total_w") || this._entity(idx, "pv1_w"))}
+          ${this._card("Микроинвертор", this._formatW(gen), "через GEN-порт", "🔌", "gen", this._entity(idx, "gen_port_power_w"))}
+          ${this._card("Нагрузка", this._formatW(load), "дом", "🏠", "load", this._entity(idx, "load_w"))}
+          ${this._card("Сеть", this._formatSignedW(grid), grid !== null ? (grid >= 0 ? "импорт" : "экспорт") : "—", "🌐", "grid", this._entity(idx, "grid_w"))}
+          ${this._card("Батарея", this._value(idx, "battery1_soc_pct"), this._formatSignedW(battery), "🔋", "battery", this._entity(idx, "battery1_soc_pct"))}
         </section>
 
         ${this._flowDiagram(idx)}
 
+        <div class="details-area ${this._showDetails ? "" : "hidden"}">
         <div class="two-col">
           <section class="card">
             <h2>☀️ DC солнечные панели</h2>
@@ -607,6 +632,7 @@ class DeyeSg05Panel extends HTMLElement {
           </div>
         </section>
 
+        </div>
         <footer>MQTT ID: <code>${this._selected}</code></footer>
       </main>
     `;
@@ -615,6 +641,22 @@ class DeyeSg05Panel extends HTMLElement {
       this._selected = event.target.value;
       this._energyMessage = "";
       this._render();
+    });
+
+    this.shadowRoot.querySelector("#details-toggle")?.addEventListener("click", () => {
+      this._showDetails = !this._showDetails;
+      this._render();
+    });
+
+    this.shadowRoot.querySelectorAll("[data-entity]").forEach((node) => {
+      const open = () => this._moreInfo(node.dataset.entity);
+      node.addEventListener("click", open);
+      node.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          open();
+        }
+      });
     });
 
     this.shadowRoot.querySelector("#energy")?.addEventListener("click", () => {
@@ -659,6 +701,11 @@ class DeyeSg05Panel extends HTMLElement {
         box-shadow:0 2px 8px rgba(0,0,0,.035);
       }
       .summary-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin-bottom:14px; }
+      .clickable { cursor:pointer; transition:transform .12s ease, filter .12s ease; }
+      .clickable:hover { filter:brightness(1.03); }
+      .cloud-node.clickable:hover { transform:translateX(-50%) translateY(-2px); }
+      .clickable:focus-visible { outline:3px solid var(--primary-color,#03a9f4); outline-offset:3px; }
+      .details-area.hidden { display:none; }
       .metric-card { min-height:105px; padding:17px; display:flex; gap:13px; align-items:center; }
       .metric-icon { font-size:28px; }
       .metric-title { font-size:12px; opacity:.63; }
@@ -679,8 +726,8 @@ class DeyeSg05Panel extends HTMLElement {
       }
       .cloud-flow {
         position:relative;
-        height:520px;
-        max-width:1040px;
+        height:400px;
+        max-width:900px;
         margin:0 auto;
       }
       .cloud-lines {
@@ -716,13 +763,13 @@ class DeyeSg05Panel extends HTMLElement {
       .cloud-node {
         position:absolute;
         z-index:2;
-        width:170px;
-        transform:translate(-50%,-50%);
+        width:150px;
+        transform:translateX(-50%);
         text-align:center;
       }
       .cloud-circle {
-        width:82px;
-        height:82px;
+        width:72px;
+        height:72px;
         margin:0 auto 7px;
         border-radius:50%;
         display:flex;
@@ -731,7 +778,7 @@ class DeyeSg05Panel extends HTMLElement {
         background:var(--card-background-color,#fff);
         border:3px solid var(--divider-color,#d7dce0);
         box-shadow:0 4px 14px rgba(0,0,0,.06);
-        font-size:30px;
+        font-size:26px;
       }
       .solar-circle { border-color:#f9a825; }
       .grid-circle { border-color:#42a5f5; }
@@ -739,25 +786,25 @@ class DeyeSg05Panel extends HTMLElement {
       .battery-circle { border-color:#26a69a; }
       .gen-circle { border-color:#7e57c2; }
       .inverter-circle {
-        width:118px;
-        height:118px;
+        width:104px;
+        height:104px;
         border-radius:22px;
         border:3px solid #2f8fe5;
         background:linear-gradient(180deg,var(--card-background-color,#fff),var(--secondary-background-color,#f2f5f7));
         flex-direction:column;
         gap:2px;
       }
-      .inverter-symbol { font-size:34px; line-height:1; }
+      .inverter-symbol { font-size:30px; line-height:1; }
       .inverter-brand { font-size:12px; font-weight:900; letter-spacing:.12em; color:#2f8fe5; }
       .cloud-label { font-size:12px; opacity:.68; }
-      .cloud-value { font-size:19px; line-height:1.15; font-weight:800; margin-top:3px; }
+      .cloud-value { font-size:17px; line-height:1.15; font-weight:800; margin-top:3px; }
       .cloud-sub { font-size:11px; opacity:.58; margin-top:3px; white-space:nowrap; }
-      .pv-cloud { left:50%; top:16%; }
-      .grid-cloud { left:18%; top:49%; }
-      .inverter-cloud { left:50%; top:49%; }
-      .load-cloud { left:82%; top:49%; }
-      .battery-cloud { left:50%; top:86%; }
-      .gen-cloud { left:24%; top:82%; }
+      .pv-cloud { left:50%; top:10px; }
+      .grid-cloud { left:15%; top:160px; }
+      .inverter-cloud { left:50%; top:144px; }
+      .load-cloud { left:85%; top:160px; }
+      .battery-cloud { left:50%; top:310px; }
+      .gen-cloud { left:22.5%; top:300px; }
 
       .two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
       .card { padding:19px; }
@@ -800,29 +847,29 @@ class DeyeSg05Panel extends HTMLElement {
       .empty { max-width:560px; margin:70px auto; text-align:center; }
       @media(max-width:1100px) {
         .summary-grid { grid-template-columns:repeat(2,1fr); }
-        .cloud-flow { height:500px; }
-        .cloud-node { width:150px; }
-        .grid-cloud { left:15%; }
-        .load-cloud { left:85%; }
-        .gen-cloud { left:20%; }
+        .cloud-flow { height:390px; max-width:820px; }
+        .cloud-node { width:138px; }
+        .grid-cloud { left:14%; }
+        .load-cloud { left:86%; }
+        .gen-cloud { left:21%; }
       }
       @media(max-width:800px) {
         main { padding:11px; }
         header { flex-direction:column; align-items:stretch; }
-        .actions { align-items:stretch; }
-        .actions label { flex:1; }
+        .actions { align-items:stretch; flex-wrap:wrap; }
+        .actions label { flex:1 1 100%; }
         select { width:100%; }
         .two-col,.energy-grid { grid-template-columns:1fr; }
-        .cloud-flow { height:560px; }
-        .cloud-circle { width:70px; height:70px; font-size:25px; }
-        .inverter-circle { width:100px; height:100px; }
-        .cloud-node { width:135px; }
-        .pv-cloud { top:13%; }
-        .grid-cloud { left:16%; top:46%; }
-        .inverter-cloud { top:46%; }
-        .load-cloud { left:84%; top:46%; }
-        .battery-cloud { top:84%; }
-        .gen-cloud { left:20%; top:80%; }
+        .cloud-flow { height:400px; max-width:100%; }
+        .cloud-circle { width:64px; height:64px; font-size:23px; }
+        .inverter-circle { width:94px; height:94px; }
+        .cloud-node { width:122px; }
+        .pv-cloud { top:10px; }
+        .grid-cloud { left:15%; top:162px; }
+        .inverter-cloud { top:147px; }
+        .load-cloud { left:85%; top:162px; }
+        .battery-cloud { top:315px; }
+        .gen-cloud { left:22%; top:305px; }
       }
       @media(max-width:560px) {
         .summary-grid { grid-template-columns:1fr; }
