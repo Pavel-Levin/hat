@@ -224,81 +224,83 @@ class DeyeSg05Panel extends HTMLElement {
     const inverter = this._number(idx, "inverter_w");
     const soc = this._value(idx, "battery1_soc_pct");
 
-    const gridMode = this._flowDirectionClass(grid, "to-bus", "from-bus");
-    const batteryMode = this._flowDirectionClass(battery, "from-battery", "to-battery");
-    const pvActive = pv !== null && Math.abs(pv) >= 5 ? "active" : "idle";
-    const genActive = gen !== null && Math.abs(gen) >= 5 ? "active" : "idle";
-    const loadActive = load !== null && Math.abs(load) >= 5 ? "active" : "idle";
+    const pvClass = pv !== null && Math.abs(pv) >= 5 ? "flow-active" : "flow-idle";
+    const genClass = gen !== null && Math.abs(gen) >= 5 ? "flow-active" : "flow-idle";
+    const loadClass = load !== null && Math.abs(load) >= 5 ? "flow-active" : "flow-idle";
+    const gridClass = grid === null || Math.abs(grid) < 5
+      ? "flow-idle"
+      : grid > 0 ? "flow-active" : "flow-active reverse";
+    const batteryClass = battery === null || Math.abs(battery) < 5
+      ? "flow-idle"
+      : battery > 0 ? "flow-active reverse" : "flow-active";
+
+    const gridState = grid === null ? "—" : grid >= 0 ? "импорт" : "экспорт";
+    const batteryState = battery === null || Math.abs(battery) < 5
+      ? "ожидание"
+      : battery > 0 ? "разряд" : "заряд";
 
     return `
       <section class="power-flow card">
         <div class="flow-title-row">
           <div>
             <h2>Потоки энергии</h2>
-            <div class="flow-hint">Сеть: + импорт, − экспорт · Батарея: знак показан как передаёт Deye</div>
+            <div class="flow-hint">Схема в стиле Deye Cloud: инвертор в центре, источники и потребители вокруг него</div>
           </div>
-          <div class="bus-badge">AC BUS</div>
+          <div class="inverter-badge">DEYE</div>
         </div>
 
-        <div class="flow-layout">
-          <div class="flow-node pv-node">
-            <div class="node-icon">☀️</div>
-            <div class="node-label">DC PV</div>
-            <div class="node-value">${this._formatW(pv)}</div>
+        <div class="cloud-flow">
+          <svg class="cloud-lines" viewBox="0 0 1000 520" preserveAspectRatio="none" aria-hidden="true">
+            <path class="energy-path solar-path ${pvClass}" d="M 500 92 L 500 225" />
+            <path class="energy-path grid-path ${gridClass}" d="M 185 255 L 415 255" />
+            <path class="energy-path load-path ${loadClass}" d="M 585 255 L 815 255" />
+            <path class="energy-path battery-path ${batteryClass}" d="M 500 335 L 500 455" />
+            <path class="energy-path gen-path ${genClass}" d="M 245 430 C 300 390, 350 340, 430 300" />
+          </svg>
+
+          <div class="cloud-node pv-cloud">
+            <div class="cloud-circle solar-circle">☀️</div>
+            <div class="cloud-label">PV</div>
+            <div class="cloud-value">${this._formatW(pv)}</div>
+            <div class="cloud-sub">PV1–PV4</div>
           </div>
 
-          <div class="connector pv-connector ${pvActive}"><span>→</span></div>
-
-          <div class="flow-node inverter-node">
-            <div class="node-icon">⚡</div>
-            <div class="node-label">Deye inverter</div>
-            <div class="node-value">${this._formatSignedW(inverter)}</div>
+          <div class="cloud-node grid-cloud">
+            <div class="cloud-circle grid-circle">🌐</div>
+            <div class="cloud-label">Сеть</div>
+            <div class="cloud-value">${this._formatSignedW(grid)}</div>
+            <div class="cloud-sub">${gridState}</div>
           </div>
 
-          <div class="connector inverter-bus active"><span>→</span></div>
-
-          <div class="flow-node bus-node">
-            <div class="node-icon">🔷</div>
-            <div class="node-label">AC BUS</div>
-            <div class="node-value">общая шина</div>
+          <div class="cloud-node inverter-cloud">
+            <div class="cloud-circle inverter-circle">
+              <div class="inverter-symbol">⚡</div>
+              <div class="inverter-brand">DEYE</div>
+            </div>
+            <div class="cloud-label">Инвертор</div>
+            <div class="cloud-value">${this._formatSignedW(inverter)}</div>
+            <div class="cloud-sub">${this._value(idx, "inverter_hz")}</div>
           </div>
 
-          <div class="connector bus-load ${loadActive}"><span>↓</span></div>
-
-          <div class="flow-node load-node">
-            <div class="node-icon">🏠</div>
-            <div class="node-label">Нагрузка</div>
-            <div class="node-value">${this._formatW(load)}</div>
+          <div class="cloud-node load-cloud">
+            <div class="cloud-circle load-circle">🏠</div>
+            <div class="cloud-label">Нагрузка</div>
+            <div class="cloud-value">${this._formatW(load)}</div>
+            <div class="cloud-sub">дом</div>
           </div>
 
-          <div class="flow-node battery-node">
-            <div class="node-icon">🔋</div>
-            <div class="node-label">Батарея</div>
-            <div class="node-value">${soc}</div>
-            <div class="node-sub">${this._formatSignedW(battery)}</div>
+          <div class="cloud-node battery-cloud">
+            <div class="cloud-circle battery-circle">🔋</div>
+            <div class="cloud-label">Батарея</div>
+            <div class="cloud-value">${soc}</div>
+            <div class="cloud-sub">${batteryState} · ${this._formatSignedW(battery)}</div>
           </div>
 
-          <div class="connector battery-connector ${batteryMode}">
-            <span class="arrow-right">↔</span>
-          </div>
-
-          <div class="flow-node gen-node">
-            <div class="node-icon">🔌</div>
-            <div class="node-label">Microinverter / GEN</div>
-            <div class="node-value">${this._formatW(gen)}</div>
-          </div>
-
-          <div class="connector gen-connector ${genActive}"><span>→</span></div>
-
-          <div class="flow-node grid-node">
-            <div class="node-icon">🌐</div>
-            <div class="node-label">Сеть</div>
-            <div class="node-value">${this._formatSignedW(grid)}</div>
-            <div class="node-sub">${grid !== null ? (grid >= 0 ? "импорт" : "экспорт") : "—"}</div>
-          </div>
-
-          <div class="connector grid-connector ${gridMode}">
-            <span>↔</span>
+          <div class="cloud-node gen-cloud">
+            <div class="cloud-circle gen-circle">🔌</div>
+            <div class="cloud-label">Microinverter / GEN</div>
+            <div class="cloud-value">${this._formatW(gen)}</div>
+            <div class="cloud-sub">GEN-порт</div>
           </div>
         </div>
       </section>
@@ -663,87 +665,100 @@ class DeyeSg05Panel extends HTMLElement {
       .metric-value { font-size:23px; font-weight:780; margin:3px 0; white-space:nowrap; }
       .metric-subtitle { font-size:12px; opacity:.62; }
       .power-flow { padding:18px; margin-bottom:14px; overflow:hidden; }
-      .flow-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:10px; }
+      .flow-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:8px; }
       .flow-title-row h2 { margin-bottom:3px; }
       .flow-hint { font-size:11px; opacity:.56; }
-      .bus-badge { font-size:11px; font-weight:750; padding:6px 9px; border-radius:999px; background:var(--secondary-background-color,#eef1f3); }
-      .flow-layout {
-        display:grid;
-        grid-template-columns:minmax(125px,1fr) 54px minmax(145px,1fr) 54px minmax(145px,1fr) 54px minmax(125px,1fr);
-        grid-template-rows:126px 54px 126px;
-        align-items:center;
-        gap:0;
-        max-width:1120px;
+      .inverter-badge {
+        font-size:11px;
+        font-weight:800;
+        letter-spacing:.08em;
+        padding:6px 10px;
+        border-radius:999px;
+        background:rgba(47,143,229,.1);
+        color:#2f8fe5;
+      }
+      .cloud-flow {
+        position:relative;
+        height:520px;
+        max-width:1040px;
         margin:0 auto;
       }
-      .flow-node {
-        background:var(--secondary-background-color,#f1f2f3);
-        border-radius:15px;
-        padding:13px;
-        min-height:96px;
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        justify-content:center;
-        text-align:center;
-        position:relative;
-        z-index:2;
-      }
-      .node-icon { font-size:25px; }
-      .node-label { font-size:12px; opacity:.66; margin-top:3px; }
-      .node-value { font-size:18px; font-weight:780; margin-top:4px; }
-      .node-sub { font-size:11px; opacity:.6; margin-top:2px; }
-      .pv-node { grid-column:1; grid-row:1; }
-      .pv-connector { grid-column:2; grid-row:1; }
-      .inverter-node { grid-column:3; grid-row:1; }
-      .inverter-bus { grid-column:4; grid-row:1; }
-      .bus-node { grid-column:5; grid-row:1; border:1px solid var(--primary-color,#03a9f4); }
-      .bus-load { grid-column:5; grid-row:2; transform:rotate(90deg); }
-      .load-node { grid-column:5; grid-row:3; }
-      .battery-node { grid-column:3; grid-row:3; }
-      .battery-connector { grid-column:4; grid-row:3; }
-      .gen-node { grid-column:7; grid-row:1; border:1px dashed var(--primary-color,#03a9f4); }
-      .gen-connector { grid-column:6; grid-row:1; transform:rotate(180deg); }
-      .grid-node { grid-column:7; grid-row:3; }
-      .grid-connector { grid-column:6; grid-row:3; }
-      .connector {
-        height:4px;
-        position:relative;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        color:var(--secondary-text-color,#777);
-      }
-      .connector::before {
-        content:"";
+      .cloud-lines {
         position:absolute;
-        left:4px;
-        right:4px;
-        height:3px;
-        border-radius:99px;
-        background:var(--divider-color,#d7d9db);
+        inset:0;
+        width:100%;
+        height:100%;
+        z-index:0;
+        overflow:visible;
       }
-      .connector span {
-        position:relative;
-        z-index:1;
-        padding:2px 5px;
-        border-radius:999px;
+      .energy-path {
+        fill:none;
+        stroke:var(--divider-color,#d3d8dc);
+        stroke-width:4;
+        stroke-linecap:round;
+        vector-effect:non-scaling-stroke;
+      }
+      .energy-path.flow-active {
+        stroke:#42a5f5;
+        stroke-dasharray:10 10;
+        animation:flowDash 1.05s linear infinite;
+      }
+      .energy-path.reverse {
+        animation-direction:reverse;
+        stroke:#ff9800;
+      }
+      .energy-path.flow-idle {
+        opacity:.42;
+      }
+      @keyframes flowDash {
+        to { stroke-dashoffset:-20; }
+      }
+      .cloud-node {
+        position:absolute;
+        z-index:2;
+        width:170px;
+        transform:translate(-50%,-50%);
+        text-align:center;
+      }
+      .cloud-circle {
+        width:82px;
+        height:82px;
+        margin:0 auto 7px;
+        border-radius:50%;
+        display:flex;
+        align-items:center;
+        justify-content:center;
         background:var(--card-background-color,#fff);
-        font-weight:800;
+        border:3px solid var(--divider-color,#d7dce0);
+        box-shadow:0 4px 14px rgba(0,0,0,.06);
+        font-size:30px;
       }
-      .connector.active::before,
-      .connector.to-bus::before,
-      .connector.from-battery::before {
-        background:var(--primary-color,#03a9f4);
-        animation:pulse 1.5s ease-in-out infinite;
+      .solar-circle { border-color:#f9a825; }
+      .grid-circle { border-color:#42a5f5; }
+      .load-circle { border-color:#546e7a; }
+      .battery-circle { border-color:#26a69a; }
+      .gen-circle { border-color:#7e57c2; }
+      .inverter-circle {
+        width:118px;
+        height:118px;
+        border-radius:22px;
+        border:3px solid #2f8fe5;
+        background:linear-gradient(180deg,var(--card-background-color,#fff),var(--secondary-background-color,#f2f5f7));
+        flex-direction:column;
+        gap:2px;
       }
-      .connector.from-bus::before,
-      .connector.to-battery::before {
-        background:var(--warning-color,#ff9800);
-        animation:pulse 1.5s ease-in-out infinite;
-      }
-      .connector.idle { opacity:.4; }
-      @keyframes pulse { 0%,100%{opacity:.45} 50%{opacity:1} }
+      .inverter-symbol { font-size:34px; line-height:1; }
+      .inverter-brand { font-size:12px; font-weight:900; letter-spacing:.12em; color:#2f8fe5; }
+      .cloud-label { font-size:12px; opacity:.68; }
+      .cloud-value { font-size:19px; line-height:1.15; font-weight:800; margin-top:3px; }
+      .cloud-sub { font-size:11px; opacity:.58; margin-top:3px; white-space:nowrap; }
+      .pv-cloud { left:50%; top:16%; }
+      .grid-cloud { left:18%; top:49%; }
+      .inverter-cloud { left:50%; top:49%; }
+      .load-cloud { left:82%; top:49%; }
+      .battery-cloud { left:50%; top:86%; }
+      .gen-cloud { left:24%; top:82%; }
+
       .two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
       .card { padding:19px; }
       .gen-panel { border-top:3px solid var(--primary-color,#03a9f4); }
@@ -785,14 +800,11 @@ class DeyeSg05Panel extends HTMLElement {
       .empty { max-width:560px; margin:70px auto; text-align:center; }
       @media(max-width:1100px) {
         .summary-grid { grid-template-columns:repeat(2,1fr); }
-        .flow-layout { grid-template-columns:1fr 38px 1fr 38px 1fr; }
-        .gen-node { grid-column:1; grid-row:3; }
-        .gen-connector { grid-column:2; grid-row:3; transform:none; }
-        .grid-node { grid-column:5; grid-row:3; }
-        .grid-connector { grid-column:4; grid-row:3; }
-        .battery-node,.battery-connector { display:none; }
-        .load-node { grid-column:3; grid-row:3; }
-        .bus-load { grid-column:3; }
+        .cloud-flow { height:500px; }
+        .cloud-node { width:150px; }
+        .grid-cloud { left:15%; }
+        .load-cloud { left:85%; }
+        .gen-cloud { left:20%; }
       }
       @media(max-width:800px) {
         main { padding:11px; }
@@ -801,9 +813,16 @@ class DeyeSg05Panel extends HTMLElement {
         .actions label { flex:1; }
         select { width:100%; }
         .two-col,.energy-grid { grid-template-columns:1fr; }
-        .flow-layout { display:grid; grid-template-columns:1fr; grid-template-rows:auto; gap:8px; }
-        .flow-node,.connector { grid-column:1 !important; grid-row:auto !important; }
-        .connector { min-height:20px; transform:rotate(90deg) !important; }
+        .cloud-flow { height:560px; }
+        .cloud-circle { width:70px; height:70px; font-size:25px; }
+        .inverter-circle { width:100px; height:100px; }
+        .cloud-node { width:135px; }
+        .pv-cloud { top:13%; }
+        .grid-cloud { left:16%; top:46%; }
+        .inverter-cloud { top:46%; }
+        .load-cloud { left:84%; top:46%; }
+        .battery-cloud { top:84%; }
+        .gen-cloud { left:20%; top:80%; }
       }
       @media(max-width:560px) {
         .summary-grid { grid-template-columns:1fr; }
