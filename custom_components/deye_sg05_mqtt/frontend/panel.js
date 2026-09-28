@@ -273,12 +273,12 @@ class DeyeSg05Panel extends HTMLElement {
         </div>
 
         <div class="cloud-flow">
-          <svg class="cloud-lines" viewBox="0 0 900 390" preserveAspectRatio="none" aria-hidden="true">
-            <path class="energy-path solar-path ${pvClass}" d="M 450 46 L 450 160" />
-            <path class="energy-path grid-path ${gridClass}" d="M 180 160 L 450 160" />
-            <path class="energy-path load-path ${loadClass}" d="M 450 160 L 720 160" />
-            <path class="energy-path gen-path ${genClass}" d="M 252 270 C 320 235, 385 195, 450 160" />
-            <path class="energy-path battery-path ${batteryClass}" d="M 450 160 C 525 195, 590 235, 648 270" />
+          <svg class="cloud-lines" viewBox="0 0 900 380" preserveAspectRatio="none" aria-hidden="true">
+            <path class="energy-path solar-path ${pvClass}" d="M 450 46 L 450 162" />
+            <path class="energy-path grid-path ${gridClass}" d="M 180 162 L 450 162" />
+            <path class="energy-path load-path ${loadClass}" d="M 450 162 L 720 162" />
+            <path class="energy-path gen-path ${genClass}" d="M 252 290 C 320 248, 385 210, 450 162" />
+            <path class="energy-path battery-path ${batteryClass}" d="M 450 162 C 525 208, 590 250, 648 290" />
           </svg>
 
           <div class="cloud-node pv-cloud clickable" ${this._clickAttrs(pvEntity)}>
@@ -727,7 +727,7 @@ class DeyeSg05Panel extends HTMLElement {
       }
       .cloud-flow {
         position:relative;
-        height:390px;
+        height:380px;
         max-width:920px;
         margin:0 auto;
       }
@@ -801,11 +801,11 @@ class DeyeSg05Panel extends HTMLElement {
       .cloud-value { font-size:17px; line-height:1.15; font-weight:800; margin-top:3px; }
       .cloud-sub { font-size:11px; opacity:.58; margin-top:3px; white-space:nowrap; }
       .pv-cloud { left:50%; top:10px; }
-      .grid-cloud { left:20%; top:124px; }
-      .inverter-cloud { left:50%; top:108px; }
-      .load-cloud { left:80%; top:124px; }
-      .gen-cloud { left:28%; top:240px; }
-      .battery-cloud { left:72%; top:240px; }
+      .grid-cloud { left:20%; top:126px; }
+      .inverter-cloud { left:50%; top:118px; }
+      .load-cloud { left:80%; top:126px; }
+      .gen-cloud { left:28%; top:254px; }
+      .battery-cloud { left:72%; top:254px; }
 
       .two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
       .card { padding:19px; }
@@ -852,13 +852,13 @@ class DeyeSg05Panel extends HTMLElement {
       .empty { max-width:560px; margin:70px auto; text-align:center; }
       @media(max-width:1100px) {
         .summary-grid { grid-template-columns:repeat(2,1fr); }
-        .cloud-flow { height:390px; max-width:820px; }
+        .cloud-flow { height:370px; max-width:820px; }
         .cloud-node { width:138px; }
-        .grid-cloud { left:18%; top:124px; }
+        .grid-cloud { left:18%; top:126px; }
         .inverter-cloud { left:50%; top:108px; }
-        .load-cloud { left:82%; top:124px; }
-        .gen-cloud { left:27%; top:240px; }
-        .battery-cloud { left:73%; top:240px; }
+        .load-cloud { left:82%; top:126px; }
+        .gen-cloud { left:27%; top:252px; }
+        .battery-cloud { left:73%; top:252px; }
       }
       @media(max-width:800px) {
         main { padding:11px; }
@@ -867,16 +867,16 @@ class DeyeSg05Panel extends HTMLElement {
         .actions label { flex:1 1 100%; }
         select { width:100%; }
         .two-col,.energy-grid { grid-template-columns:1fr; }
-        .cloud-flow { height:390px; max-width:100%; }
+        .cloud-flow { height:380px; max-width:100%; }
         .cloud-circle { width:64px; height:64px; font-size:23px; }
         .inverter-circle { width:94px; height:94px; }
         .cloud-node { width:122px; }
         .pv-cloud { left:50%; top:10px; }
-        .grid-cloud { left:19%; top:126px; }
+        .grid-cloud { left:19%; top:132px; }
         .inverter-cloud { left:50%; top:110px; }
-        .load-cloud { left:81%; top:126px; }
-        .gen-cloud { left:27%; top:242px; }
-        .battery-cloud { left:73%; top:242px; }
+        .load-cloud { left:81%; top:132px; }
+        .gen-cloud { left:27%; top:258px; }
+        .battery-cloud { left:73%; top:258px; }
       }
       @media(max-width:560px) {
         .summary-grid { grid-template-columns:1fr; }
