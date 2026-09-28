@@ -235,7 +235,7 @@ class DeyeSg05Panel extends HTMLElement {
     const pv = this._sum(idx, ["pv1_w", "pv2_w", "pv3_w", "pv4_w"]);
     const gen = this._number(idx, "gen_port_power_w");
     const grid = this._number(idx, "grid_w");
-    const battery = this._number(idx, "battery1_power_w");
+    const battery = this._number(idx, "battery_total_power_w") ?? this._sum(idx, ["battery1_power_w", "battery2_power_w"]);
     const load = this._number(idx, "load_w");
     const inverter = this._number(idx, "inverter_w");
     const soc = this._value(idx, "battery1_soc_pct");
@@ -243,7 +243,7 @@ class DeyeSg05Panel extends HTMLElement {
     const pvEntity = this._entity(idx, "pv_total_w") || this._entity(idx, "pv1_w");
     const genEntity = this._entity(idx, "gen_port_power_w");
     const gridEntity = this._entity(idx, "grid_w");
-    const batteryEntity = this._entity(idx, "battery1_soc_pct");
+    const batteryEntity = this._entity(idx, "battery_total_power_w") || this._entity(idx, "battery1_soc_pct");
     const loadEntity = this._entity(idx, "load_w");
     const inverterEntity = this._entity(idx, "inverter_w");
 
@@ -365,7 +365,7 @@ class DeyeSg05Panel extends HTMLElement {
         genPower: this._entity(idx, "gen_port_power_w"),
         batteryDischarge: this._entity(idx, "battery_discharge_total_kwh"),
         batteryCharge: this._entity(idx, "battery_charge_total_kwh"),
-        batteryPower: this._entity(idx, "battery1_power_w"),
+        batteryPower: this._entity(idx, "battery_total_power_w") || this._entity(idx, "battery1_power_w"),
         batterySoc: this._entity(idx, "battery1_soc_pct"),
       };
 
@@ -467,7 +467,7 @@ class DeyeSg05Panel extends HTMLElement {
     const gen = this._number(idx, "gen_port_power_w");
     const load = this._number(idx, "load_w");
     const grid = this._number(idx, "grid_w");
-    const battery = this._number(idx, "battery1_power_w");
+    const battery = this._number(idx, "battery_total_power_w") ?? this._sum(idx, ["battery1_power_w", "battery2_power_w"]);
     const health = this._health(idx);
 
     const options = gateways.map((gateway) =>
@@ -561,9 +561,10 @@ class DeyeSg05Panel extends HTMLElement {
           <div class="section-heading">
             <div>
               <h2>🧠 Данные BMS</h2>
-              <div class="section-subtitle">Параметры, передаваемые батарейной BMS в инвертор</div>
+              <div class="section-subtitle">Учитываем обе BMS-шины; суммарный ток = BMS1 + BMS2</div>
             </div>
           </div>
+          <div class="bms-total-strip"><span>Суммарный ток BMS</span><strong>${this._value(idx, "bms_total_current_a")}</strong><small>BMS1: ${this._value(idx, "bms1_current_a")} · BMS2: ${this._value(idx, "bms2_current_a")}</small></div>
           <div class="two-col bms-grid">
             ${this._bmsPanel(idx, 1)}
             ${this._bmsPanel(idx, 2)}
@@ -814,6 +815,10 @@ class DeyeSg05Panel extends HTMLElement {
       .section-heading h2 { margin:0; }
       .section-subtitle { font-size:12px; opacity:.58; margin-top:3px; }
       .bms-grid { margin-bottom:0; }
+      .bms-total-strip { display:flex; align-items:baseline; gap:12px; padding:10px 12px; margin-bottom:10px; border-radius:12px; background:var(--secondary-background-color,#f1f2f3); }
+      .bms-total-strip span { font-size:12px; opacity:.68; }
+      .bms-total-strip strong { font-size:20px; }
+      .bms-total-strip small { margin-left:auto; opacity:.58; }
       .bms-panel { border-top:3px solid #7b61ff; }
       .bms-offline { opacity:.72; border-top-color:var(--divider-color,#cfd2d4); }
       .bms-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
