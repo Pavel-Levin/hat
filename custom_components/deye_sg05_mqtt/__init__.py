@@ -19,7 +19,7 @@ PLATFORMS = [Platform.SENSOR, Platform.BUTTON]
 
 PANEL_URL_PATH = "deye-sg05-dashboard"
 PANEL_STATIC_PATH = "/deye_sg05_mqtt/panel.js"
-PANEL_MODULE_URL = "/deye_sg05_mqtt/panel.js?v=0.5.6"
+PANEL_MODULE_URL = "/deye_sg05_mqtt/panel.js?v=0.5.5"
 PANEL_DATA_KEY = f"{DOMAIN}_panel_registered"
 
 
