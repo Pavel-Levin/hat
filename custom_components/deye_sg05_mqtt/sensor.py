@@ -14,6 +14,9 @@ from .register_map import METRICS, MetricDef
 
 _METRICS_BY_KEY = {metric.key: metric for metric in METRICS}
 _PV_POWER_KEYS = ("pv1_w", "pv2_w", "pv3_w", "pv4_w")
+_BATTERY_CURRENT_KEYS = ("battery1_current_a", "battery2_current_a")
+_BATTERY_POWER_KEYS = ("battery1_power_w", "battery2_power_w")
+_BMS_CURRENT_KEYS = ("bms1_current_a", "bms2_current_a")
 
 
 def _device_class(metric: MetricDef):
@@ -86,7 +89,14 @@ async def async_setup_entry(
             DeyeRegisterSensor(client, device_id, metric)
             for metric in METRICS
         ]
-        entities.append(DeyePvTotalPowerSensor(client, device_id))
+        entities.extend(
+            [
+                DeyePvTotalPowerSensor(client, device_id),
+                DeyeAggregateSensor(client, device_id, "battery_total_current_a", "Батарея общий ток", _BATTERY_CURRENT_KEYS, "A", SensorDeviceClass.CURRENT, "mdi:current-dc", "battery"),
+                DeyeAggregateSensor(client, device_id, "battery_total_power_w", "Батарея общая мощность", _BATTERY_POWER_KEYS, "W", SensorDeviceClass.POWER, "mdi:battery-charging", "battery"),
+                DeyeAggregateSensor(client, device_id, "bms_total_current_a", "BMS общий ток", _BMS_CURRENT_KEYS, "A", SensorDeviceClass.CURRENT, "mdi:current-dc", "bms"),
+            ]
+        )
         async_add_entities(entities)
 
     for device_id in tuple(client.devices):
@@ -211,4 +221,58 @@ class DeyePvTotalPowerSensor(SensorEntity):
 
     @callback
     def _handle_update(self) -> None:
+        self.async_write_ha_state()
+
+
+class DeyeAggregateSensor(SensorEntity):
+    """Computed sum across two battery/BMS inputs."""
+    _attr_should_poll = False
+    _attr_has_entity_name = True
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, client, device_id, key, name, source_keys, unit, device_class, icon, group):
+        self.client = client
+        self.device_id = device_id
+        self.key = key
+        self.source_keys = source_keys
+        self.group = group
+        self._attr_unique_id = f"{device_id}_{key}"
+        self._attr_name = name
+        self._attr_native_unit_of_measurement = unit
+        self._attr_device_class = device_class
+        self._attr_icon = icon
+        self._attr_device_info = _main_device_info(client, device_id)
+
+    def _source_values(self):
+        values = []
+        for key in self.source_keys:
+            value = self.client.metric_value(self.device_id, _METRICS_BY_KEY[key])
+            if value is not None:
+                values.append(float(value))
+        return values
+
+    @property
+    def native_value(self):
+        values = self._source_values()
+        return None if not values else round(sum(values), 4)
+
+    @property
+    def available(self):
+        return self.client.device_available(self.device_id) and self.native_value is not None
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "gateway_id": self.device_id,
+            "metric_key": self.key,
+            "group": self.group,
+            "sources": list(self.source_keys),
+            "active_sources": len(self._source_values()),
+        }
+
+    async def async_added_to_hass(self):
+        self.async_on_remove(self.client.add_update_listener(self.device_id, self._handle_update))
+
+    @callback
+    def _handle_update(self):
         self.async_write_ha_state()
