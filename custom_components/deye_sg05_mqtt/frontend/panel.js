@@ -156,6 +156,60 @@ class DeyeSg05Panel extends HTMLElement {
     `;
   }
 
+  _bmsPresent(idx, n) {
+    const keys = [
+      `bms${n}_soc_pct`,
+      `bms${n}_voltage_v`,
+      `bms${n}_temperature_c`,
+      `bms${n}_charge_current_limit_a`,
+      `bms${n}_discharge_current_limit_a`,
+    ];
+    return keys.some((key) => this._number(idx, key) !== null);
+  }
+
+  _bmsPanel(idx, n) {
+    const present = this._bmsPresent(idx, n);
+    if (!present) {
+      return `
+        <section class="card bms-panel bms-offline">
+          <div class="bms-header">
+            <h2>🧠 BMS ${n}</h2>
+            <span class="status-chip offline">нет данных</span>
+          </div>
+          <div class="bms-empty">BMS ${n} не подключена или шлюз возвращает 0xFFFF.</div>
+        </section>
+      `;
+    }
+
+    const current = this._number(idx, `bms${n}_current_a`);
+    const currentText = current === null
+      ? "—"
+      : `${current > 0 ? "+" : ""}${this._value(idx, `bms${n}_current_a`)}`;
+
+    return `
+      <section class="card bms-panel">
+        <div class="bms-header">
+          <h2>🧠 BMS ${n}</h2>
+          <span class="status-chip online">данные есть</span>
+        </div>
+        <div class="bms-kpis">
+          <div class="bms-kpi"><span>SOC</span><strong>${this._value(idx, `bms${n}_soc_pct`)}</strong></div>
+          <div class="bms-kpi"><span>Напряжение</span><strong>${this._value(idx, `bms${n}_voltage_v`)}</strong></div>
+          <div class="bms-kpi"><span>Ток</span><strong>${currentText}</strong></div>
+          <div class="bms-kpi"><span>Температура</span><strong>${this._value(idx, `bms${n}_temperature_c`)}</strong></div>
+        </div>
+        <div class="rows">
+          ${this._row("Порог напряжения заряда", this._value(idx, `bms${n}_charge_voltage_v`))}
+          ${this._row("Порог напряжения разряда", this._value(idx, `bms${n}_discharge_voltage_v`))}
+          ${this._row("Лимит тока заряда", this._value(idx, `bms${n}_charge_current_limit_a`))}
+          ${this._row("Лимит тока разряда", this._value(idx, `bms${n}_discharge_current_limit_a`))}
+          ${this._row("Макс. ток заряда", this._value(idx, `bms${n}_charge_max_current_a`))}
+          ${this._row("Макс. ток разряда", this._value(idx, `bms${n}_discharge_max_current_a`))}
+        </div>
+      </section>
+    `;
+  }
+
   _flowDirectionClass(value, positiveClass, negativeClass) {
     if (value === null || Math.abs(value) < 5) return "idle";
     return value > 0 ? positiveClass : negativeClass;
@@ -476,6 +530,19 @@ class DeyeSg05Panel extends HTMLElement {
           </section>
         </div>
 
+        <section class="bms-section">
+          <div class="section-heading">
+            <div>
+              <h2>🧠 Данные BMS</h2>
+              <div class="section-subtitle">Параметры, передаваемые батарейной BMS в инвертор</div>
+            </div>
+          </div>
+          <div class="two-col bms-grid">
+            ${this._bmsPanel(idx, 1)}
+            ${this._bmsPanel(idx, 2)}
+          </div>
+        </section>
+
         <div class="two-col">
           <section class="card">
             <h2>🏠 Нагрузка</h2>
@@ -680,6 +747,23 @@ class DeyeSg05Panel extends HTMLElement {
       .two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
       .card { padding:19px; }
       .gen-panel { border-top:3px solid var(--primary-color,#03a9f4); }
+      .bms-section { margin-bottom:14px; }
+      .section-heading { display:flex; justify-content:space-between; align-items:end; margin:0 2px 10px; }
+      .section-heading h2 { margin:0; }
+      .section-subtitle { font-size:12px; opacity:.58; margin-top:3px; }
+      .bms-grid { margin-bottom:0; }
+      .bms-panel { border-top:3px solid #7b61ff; }
+      .bms-offline { opacity:.72; border-top-color:var(--divider-color,#cfd2d4); }
+      .bms-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+      .bms-header h2 { margin:0; }
+      .status-chip { font-size:11px; font-weight:750; padding:5px 8px; border-radius:999px; }
+      .status-chip.online { background:rgba(49,163,84,.12); color:#238443; }
+      .status-chip.offline { background:var(--secondary-background-color,#eef0f2); color:var(--secondary-text-color,#777); }
+      .bms-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px; }
+      .bms-kpi { background:var(--secondary-background-color,#f1f2f3); border-radius:11px; padding:10px; display:flex; flex-direction:column; gap:4px; }
+      .bms-kpi span { font-size:11px; opacity:.62; }
+      .bms-kpi strong { font-size:17px; }
+      .bms-empty { padding:18px; text-align:center; opacity:.62; background:var(--secondary-background-color,#f1f2f3); border-radius:12px; }
       .mini-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin-bottom:12px; }
       .mini-card { padding:12px; border-radius:12px; background:var(--secondary-background-color,#f1f2f3); }
       .mini-title { font-size:12px; font-weight:760; opacity:.7; }
