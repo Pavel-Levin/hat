@@ -6,14 +6,12 @@ Custom integration for **Deye SUN-20K-SG05LP3-EU-SM2** and MQTT gateways using t
 
 - Read-only MQTT/Modbus register decoding.
 - Battery, BMS, grid, inverter, load and PV1-PV4 sensors.
-- GEN-port sensors are exposed as a separate logical **Microinverter (GEN)** device.
+- GEN-port measurements exposed as a separate logical **Microinverter (GEN)** device.
 - Built-in **Deye Dashboard** sidebar panel.
-- One-click Energy Dashboard configuration for the selected gateway:
-  - grid import/export,
-  - DC PV generation,
-  - microinverter generation through the GEN port,
-  - battery charge/discharge and SOC.
-- Multiple gateways are distinguished by MQTT ID.
+- Version 0.5 adds a redesigned live energy-flow view with separate DC PV, Deye inverter, AC bus, load, battery, grid and GEN microinverter nodes.
+- Grid direction is shown as import/export from signed power.
+- Multiple gateways are selectable by MQTT ID.
+- One-click Energy Dashboard setup for grid, DC PV, GEN microinverter and battery.
 
 ## Installation with HACS
 
@@ -26,11 +24,11 @@ After restart:
 3. Enter MQTT credentials.
 4. Open **Deye Dashboard** from the sidebar.
 5. Select the required gateway.
-6. Press **Настроить Energy** once to add that gateway's energy sources without deleting unrelated Energy sources.
+6. Press **Настроить Energy** if you want the integration to populate the Energy dashboard sources.
 
 ## MQTT
 
-The current gateway firmware is supported under both branches:
+Supported raw register topic styles:
 
 ```text
 id-nsg-v0.1-XXXXXXXXXXXX/modbus/data
@@ -41,4 +39,4 @@ Legacy `/read/#` topics remain supported.
 
 ## Safety
 
-This integration is read-only and does not write inverter Modbus registers.
+The integration remains read-only. It does not write inverter Modbus registers.
