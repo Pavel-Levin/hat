@@ -93,7 +93,6 @@ class DeyeConfigureEnergyButton(ButtonEntity):
             "total_pv_energy_kwh",
             "battery_discharge_total_kwh",
             "battery_charge_total_kwh",
-            "battery1_power_w",
             "battery1_soc_pct",
         }
         missing = sorted(key for key in required if key not in entities)
@@ -166,7 +165,12 @@ class DeyeConfigureEnergyButton(ButtonEntity):
                 "name": f"Deye Battery {marker}",
                 "stat_energy_from": entities["battery_discharge_total_kwh"],
                 "stat_energy_to": entities["battery_charge_total_kwh"],
-                "power_config": {"stat_rate": entities["battery1_power_w"]},
+                "power_config": {
+                    "stat_rate": entities.get(
+                        "battery_total_power_w",
+                        entities.get("battery1_power_w"),
+                    )
+                },
                 "stat_soc": entities["battery1_soc_pct"],
             }
         )
