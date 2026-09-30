@@ -57,6 +57,7 @@ class DeyeMqttClient:
         username: str,
         password: str,
         use_tls: bool = False,
+        device_id: str = "",
     ) -> None:
         self.hass = hass
         self.broker = broker
@@ -64,6 +65,7 @@ class DeyeMqttClient:
         self.username = username
         self.password = password
         self.use_tls = use_tls
+        self.device_id = device_id
         self.devices: dict[str, DeyeDevice] = {}
         self.connected = False
         self._task: asyncio.Task | None = None
@@ -154,16 +156,21 @@ class DeyeMqttClient:
                     delay = 2
                     self._notify_all()
 
-                    await client.subscribe("+/hello", qos=0)
-                    await client.subscribe("+/status", qos=0)
+                    # Reader credentials are restricted to one gateway, so an
+                    # exact topic is required; a "+/modbus/#" subscription is
+                    # correctly rejected by the broker ACL.
+                    topic_root = self.device_id or "+"
 
                     # Current gateway firmware publishes raw Modbus data under:
                     #   <id>/modbus/data
                     #   <id>/modbus/1/586/11
                     #
                     # Keep legacy "read" subscriptions too for compatibility.
-                    await client.subscribe("+/modbus/#", qos=0)
-                    await client.subscribe("+/read/#", qos=0)
+                    await client.subscribe(f"{topic_root}/modbus/#", qos=0)
+                    if not self.device_id:
+                        await client.subscribe("+/hello", qos=0)
+                        await client.subscribe("+/status", qos=0)
+                        await client.subscribe("+/read/#", qos=0)
 
                     async for message in client.messages:
                         self._handle_message(str(message.topic), bytes(message.payload))
@@ -197,6 +204,8 @@ class DeyeMqttClient:
 
         device_id = topic_parts[0]
         if not device_id.startswith(DEVICE_PREFIX):
+            return
+        if self.device_id and device_id != self.device_id:
             return
 
         if clean_topic.endswith("/hello") and isinstance(data, dict):

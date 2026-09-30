@@ -18,7 +18,15 @@ from homeassistant.helpers.selector import (
     TextSelectorType,
 )
 
-from .const import CONF_BROKER, CONF_TLS, DEFAULT_BROKER, DEFAULT_PORT, DOMAIN
+from .const import (
+    CONF_BROKER,
+    CONF_DEVICE_ID,
+    CONF_TLS,
+    DEFAULT_BROKER,
+    DEFAULT_PORT,
+    DEVICE_PREFIX,
+    DOMAIN,
+)
 from .mqtt_client import async_test_connection
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,6 +42,9 @@ def _connection_schema() -> vol.Schema:
                 NumberSelectorConfig(min=1, max=65535, mode=NumberSelectorMode.BOX)
             ),
             vol.Required(CONF_TLS, default=False): BooleanSelector(),
+            vol.Required(CONF_DEVICE_ID): TextSelector(
+                TextSelectorConfig(type=TextSelectorType.TEXT)
+            ),
             vol.Optional(CONF_USERNAME, default=""): TextSelector(
                 TextSelectorConfig(autocomplete="username")
             ),
@@ -63,8 +74,16 @@ class DeyeSg05MqttConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             host = user_input[CONF_HOST].strip()
             port = int(user_input[CONF_PORT])
             use_tls = bool(user_input.get(CONF_TLS, port == 8883))
+            device_id = user_input[CONF_DEVICE_ID].strip()
             self._username = user_input.get(CONF_USERNAME, "")
             self._password = user_input.get(CONF_PASSWORD, "")
+            if not device_id.startswith(DEVICE_PREFIX) or len(device_id) <= len(DEVICE_PREFIX):
+                errors[CONF_DEVICE_ID] = "invalid_device_id"
+                return self.async_show_form(
+                    step_id="user",
+                    data_schema=_connection_schema(),
+                    errors=errors,
+                )
             try:
                 await async_test_connection(
                     host,
@@ -80,7 +99,7 @@ class DeyeSg05MqttConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "unknown"
             else:
                 self._async_abort_entries_match(
-                    {CONF_BROKER: host, CONF_USERNAME: self._username}
+                    {CONF_BROKER: host, CONF_DEVICE_ID: device_id}
                 )
                 return self.async_create_entry(
                     title=f"Deye SG05 MQTT ({host})",
@@ -88,6 +107,7 @@ class DeyeSg05MqttConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_BROKER: host,
                         CONF_PORT: port,
                         CONF_TLS: use_tls,
+                        CONF_DEVICE_ID: device_id,
                         CONF_USERNAME: self._username,
                         CONF_PASSWORD: self._password,
                     },

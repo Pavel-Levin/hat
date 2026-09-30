@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 import aiomqtt
 
@@ -12,15 +13,24 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
-from .const import CONF_BROKER, CONF_PORT, CONF_TLS, DOMAIN
+from .const import CONF_BROKER, CONF_DEVICE_ID, CONF_PORT, CONF_TLS, DEVICE_PREFIX, DOMAIN
 from .mqtt_client import DeyeMqttClient, async_test_connection
 
 PLATFORMS = [Platform.SENSOR, Platform.BUTTON]
 
 PANEL_URL_PATH = "deye-sg05-dashboard"
 PANEL_STATIC_PATH = "/deye_sg05_mqtt/panel.js"
-PANEL_MODULE_URL = "/deye_sg05_mqtt/panel.js?v=0.5.6"
+PANEL_MODULE_URL = "/deye_sg05_mqtt/panel.js?v=0.5.7"
 PANEL_DATA_KEY = f"{DOMAIN}_panel_registered"
+
+
+def _configured_device_id(entry: ConfigEntry, username: str) -> str:
+    """Return the configured ID or infer it from a generated metrics username."""
+    configured = str(entry.data.get(CONF_DEVICE_ID, "")).strip()
+    if configured:
+        return configured
+    match = re.fullmatch(r"metrics-([0-9a-fA-F]{12})", username)
+    return f"{DEVICE_PREFIX}{match.group(1).upper()}" if match else ""
 
 
 async def _async_register_dashboard(hass: HomeAssistant) -> None:
@@ -54,6 +64,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     username = entry.data.get(CONF_USERNAME, "")
     password = entry.data.get(CONF_PASSWORD, "")
     use_tls = entry.data.get(CONF_TLS, port == 8883)
+    device_id = _configured_device_id(entry, username)
 
     try:
         await async_test_connection(broker, port, username, password, use_tls)
@@ -62,7 +73,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await _async_register_dashboard(hass)
 
-    client = DeyeMqttClient(hass, broker, port, username, password, use_tls)
+    client = DeyeMqttClient(
+        hass, broker, port, username, password, use_tls, device_id
+    )
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = client
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

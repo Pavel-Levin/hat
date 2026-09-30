@@ -10,6 +10,7 @@ DEFAULT_PORT = 1883
 CONF_BROKER = "broker"
 CONF_PORT = "port"
 CONF_TLS = "tls"
+CONF_DEVICE_ID = "device_id"
 
 DEVICE_PREFIX = "id-nsg-v0.1-"
 MODEL = "SUN-20K-SG05LP3-EU-SM2"

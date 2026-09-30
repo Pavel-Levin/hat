@@ -21,7 +21,7 @@ After restart:
 
 1. Settings -> Devices & services -> Add integration.
 2. Add **Deye SG05 MQTT**.
-3. Enter the MQTT broker address, port, TLS mode and credentials. For the
+3. Enter the gateway ID, MQTT broker address, port, TLS mode and credentials. For the
    NSG production broker use port `8883` with TLS enabled. Use
    `core-mosquitto:1883` without TLS only when the gateway publishes to the
    Home Assistant Mosquitto add-on itself.

@@ -6,6 +6,7 @@
         "title": "Connect to MQTT",
         "description": "Enter the broker used by the gateway. Enable TLS for the NSG production broker on port 8883.",
         "data": {
+          "device_id": "Gateway ID (id-nsg-v0.1-...)",
           "host": "Broker address",
           "port": "Port",
           "tls": "Use TLS",
@@ -26,6 +27,7 @@
     },
     "error": {
       "cannot_connect": "Cannot connect to the MQTT broker.",
+      "invalid_device_id": "Enter a gateway ID beginning with id-nsg-v0.1-.",
       "unknown": "Unexpected error."
     },
     "abort": {
