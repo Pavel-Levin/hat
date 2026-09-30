@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 import json
 import logging
 import re
+import ssl
 from typing import Any
 
 import aiomqtt
@@ -31,7 +32,7 @@ class DeyeDevice:
 
 
 async def async_test_connection(
-    broker: str, port: int, username: str, password: str
+    broker: str, port: int, username: str, password: str, use_tls: bool = False
 ) -> None:
     """Open and close an MQTT connection to validate broker credentials."""
     async with asyncio.timeout(7):
@@ -40,6 +41,7 @@ async def async_test_connection(
             port=port,
             username=username or None,
             password=password or None,
+            tls_context=ssl.create_default_context() if use_tls else None,
         ):
             return
 
@@ -54,12 +56,14 @@ class DeyeMqttClient:
         port: int,
         username: str,
         password: str,
+        use_tls: bool = False,
     ) -> None:
         self.hass = hass
         self.broker = broker
         self.port = port
         self.username = username
         self.password = password
+        self.use_tls = use_tls
         self.devices: dict[str, DeyeDevice] = {}
         self.connected = False
         self._task: asyncio.Task | None = None
@@ -144,6 +148,7 @@ class DeyeMqttClient:
                     port=self.port,
                     username=self.username or None,
                     password=self.password or None,
+                    tls_context=ssl.create_default_context() if self.use_tls else None,
                 ) as client:
                     self.connected = True
                     delay = 2

@@ -12,14 +12,14 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
-from .const import CONF_BROKER, CONF_PORT, DOMAIN
+from .const import CONF_BROKER, CONF_PORT, CONF_TLS, DOMAIN
 from .mqtt_client import DeyeMqttClient, async_test_connection
 
 PLATFORMS = [Platform.SENSOR, Platform.BUTTON]
 
 PANEL_URL_PATH = "deye-sg05-dashboard"
 PANEL_STATIC_PATH = "/deye_sg05_mqtt/panel.js"
-PANEL_MODULE_URL = "/deye_sg05_mqtt/panel.js?v=0.5.5"
+PANEL_MODULE_URL = "/deye_sg05_mqtt/panel.js?v=0.5.6"
 PANEL_DATA_KEY = f"{DOMAIN}_panel_registered"
 
 
@@ -53,15 +53,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     port = entry.data[CONF_PORT]
     username = entry.data.get(CONF_USERNAME, "")
     password = entry.data.get(CONF_PASSWORD, "")
+    use_tls = entry.data.get(CONF_TLS, port == 8883)
 
     try:
-        await async_test_connection(broker, port, username, password)
+        await async_test_connection(broker, port, username, password, use_tls)
     except (aiomqtt.MqttError, TimeoutError, OSError) as err:
         raise ConfigEntryNotReady(f"MQTT broker is not reachable: {err}") from err
 
     await _async_register_dashboard(hass)
 
-    client = DeyeMqttClient(hass, broker, port, username, password)
+    client = DeyeMqttClient(hass, broker, port, username, password, use_tls)
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = client
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

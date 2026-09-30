@@ -4,8 +4,11 @@
     "step": {
       "user": {
         "title": "Connect to MQTT",
-        "description": "Enter the MQTT username and password. The standard Home Assistant Mosquitto broker (`core-mosquitto:1883`) is tried first. If it is not available, a second step will ask for the broker address.",
+        "description": "Enter the broker used by the gateway. Enable TLS for the NSG production broker on port 8883.",
         "data": {
+          "host": "Broker address",
+          "port": "Port",
+          "tls": "Use TLS",
           "username": "Username",
           "password": "Password"
         }
