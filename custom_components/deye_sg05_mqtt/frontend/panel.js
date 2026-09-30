@@ -114,6 +114,11 @@ class DeyeSg05Panel extends HTMLElement {
       : `${sign}${Math.round(value)} W`;
   }
 
+  _gridPhaseClass(idx, phase) {
+    const voltage = this._number(idx, `grid_${phase}_v`);
+    return voltage !== null && voltage >= 50 ? `phase-${phase}-ok` : `phase-${phase}-missing`;
+  }
+
   _card(title, value, subtitle, icon, tone = "", entityId = null) {
     return `
       <div class="metric-card ${tone} ${entityId ? "clickable" : ""}" ${this._clickAttrs(entityId)}>
@@ -289,9 +294,12 @@ class DeyeSg05Panel extends HTMLElement {
           </div>
 
           <div class="cloud-node grid-cloud clickable" ${this._clickAttrs(gridEntity)}>
-            <div class="cloud-circle grid-circle">🌐</div>
+            <div
+              class="cloud-circle grid-circle ${this._gridPhaseClass(idx, "l1")} ${this._gridPhaseClass(idx, "l2")} ${this._gridPhaseClass(idx, "l3")}"
+              title="L1: ${this._value(idx, "grid_l1_v")} · L2: ${this._value(idx, "grid_l2_v")} · L3: ${this._value(idx, "grid_l3_v")}"
+            ><span>🌐</span></div>
             <div class="cloud-label">Сеть</div>
-            <div class="cloud-value">${this._formatSignedW(grid)}</div>
+            <div class="cloud-value">${this._formatW(grid)}</div>
             <div class="cloud-sub">${gridState}</div>
           </div>
 
@@ -496,7 +504,7 @@ class DeyeSg05Panel extends HTMLElement {
           ${this._card("DC PV", this._formatW(pv), "PV1–PV4", "☀️", "solar", this._entity(idx, "pv_total_w") || this._entity(idx, "pv1_w"))}
           ${this._card("Микроинвертор", this._formatW(gen), "через GEN-порт", "🔌", "gen", this._entity(idx, "gen_port_power_w"))}
           ${this._card("Нагрузка", this._formatW(load), "дом", "🏠", "load", this._entity(idx, "load_w"))}
-          ${this._card("Сеть", this._formatSignedW(grid), grid !== null ? (grid >= 0 ? "импорт" : "экспорт") : "—", "🌐", "grid", this._entity(idx, "grid_w"))}
+          ${this._card("Сеть", this._formatW(grid), grid !== null ? (grid >= 0 ? "импорт" : "экспорт") : "—", "🌐", "grid", this._entity(idx, "grid_w"))}
           ${this._card("Батарея", this._value(idx, "battery1_soc_pct"), this._formatSignedW(battery), "🔋", "battery", this._entity(idx, "battery1_soc_pct"))}
         </section>
 
@@ -782,7 +790,32 @@ class DeyeSg05Panel extends HTMLElement {
         font-size:26px;
       }
       .solar-circle { border-color:#f9a825; }
-      .grid-circle { border-color:#42a5f5; }
+      .grid-circle {
+        --grid-l1:#42a5f5;
+        --grid-l2:#42a5f5;
+        --grid-l3:#42a5f5;
+        position:relative;
+        border:0;
+        background:conic-gradient(
+          var(--grid-l1) 0deg 116deg,
+          transparent 116deg 120deg,
+          var(--grid-l2) 120deg 236deg,
+          transparent 236deg 240deg,
+          var(--grid-l3) 240deg 356deg,
+          transparent 356deg 360deg
+        );
+      }
+      .grid-circle::before {
+        content:"";
+        position:absolute;
+        inset:4px;
+        border-radius:50%;
+        background:var(--card-background-color,#fff);
+      }
+      .grid-circle span { position:relative; z-index:1; }
+      .grid-circle.phase-l1-missing { --grid-l1:#ef5350; }
+      .grid-circle.phase-l2-missing { --grid-l2:#ef5350; }
+      .grid-circle.phase-l3-missing { --grid-l3:#ef5350; }
       .load-circle { border-color:#546e7a; }
       .battery-circle { border-color:#26a69a; }
       .gen-circle { border-color:#7e57c2; }
