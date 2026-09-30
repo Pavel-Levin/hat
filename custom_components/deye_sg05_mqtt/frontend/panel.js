@@ -279,11 +279,11 @@ class DeyeSg05Panel extends HTMLElement {
 
         <div class="cloud-flow">
           <svg class="cloud-lines" viewBox="0 0 900 380" preserveAspectRatio="none" aria-hidden="true">
-            <path class="energy-path solar-path ${pvClass}" d="M 450 46 L 450 162" />
-            <path class="energy-path grid-path ${gridClass}" d="M 180 162 L 450 162" />
-            <path class="energy-path load-path ${loadClass}" d="M 450 162 L 720 162" />
-            <path class="energy-path gen-path ${genClass}" d="M 252 290 C 320 248, 385 210, 450 162" />
-            <path class="energy-path battery-path ${batteryClass}" d="M 450 162 C 525 208, 590 250, 648 290" />
+            <path class="energy-path solar-path ${pvClass}" d="M 450 46 L 450 184" />
+            <path class="energy-path grid-path ${gridClass}" d="M 180 162 L 450 184" />
+            <path class="energy-path load-path ${loadClass}" d="M 450 184 L 720 162" />
+            <path class="energy-path gen-path ${genClass}" d="M 252 290 C 320 248, 385 218, 450 184" />
+            <path class="energy-path battery-path ${batteryClass}" d="M 450 184 C 525 218, 590 250, 648 290" />
           </svg>
 
           <div class="cloud-node pv-cloud clickable" ${this._clickAttrs(pvEntity)}>
@@ -835,7 +835,7 @@ class DeyeSg05Panel extends HTMLElement {
       .cloud-sub { font-size:11px; opacity:.58; margin-top:3px; white-space:nowrap; }
       .pv-cloud { left:50%; top:10px; }
       .grid-cloud { left:20%; top:126px; }
-      .inverter-cloud { left:50%; top:118px; }
+      .inverter-cloud { left:50%; top:132px; }
       .load-cloud { left:80%; top:126px; }
       .gen-cloud { left:28%; top:254px; }
       .battery-cloud { left:72%; top:254px; }
@@ -888,7 +888,7 @@ class DeyeSg05Panel extends HTMLElement {
         .cloud-flow { height:370px; max-width:820px; }
         .cloud-node { width:138px; }
         .grid-cloud { left:18%; top:126px; }
-        .inverter-cloud { left:50%; top:108px; }
+        .inverter-cloud { left:50%; top:132px; }
         .load-cloud { left:82%; top:126px; }
         .gen-cloud { left:27%; top:252px; }
         .battery-cloud { left:73%; top:252px; }
@@ -906,7 +906,7 @@ class DeyeSg05Panel extends HTMLElement {
         .cloud-node { width:122px; }
         .pv-cloud { left:50%; top:10px; }
         .grid-cloud { left:19%; top:132px; }
-        .inverter-cloud { left:50%; top:110px; }
+        .inverter-cloud { left:50%; top:128px; }
         .load-cloud { left:81%; top:132px; }
         .gen-cloud { left:27%; top:258px; }
         .battery-cloud { left:73%; top:258px; }
