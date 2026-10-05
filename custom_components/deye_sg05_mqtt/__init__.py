@@ -16,11 +16,11 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from .const import CONF_BROKER, CONF_DEVICE_ID, CONF_PORT, CONF_TLS, DEVICE_PREFIX, DOMAIN
 from .mqtt_client import DeyeMqttClient, async_test_connection
 
-PLATFORMS = [Platform.SENSOR, Platform.BUTTON]
+PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
 
 PANEL_URL_PATH = "deye-sg05-dashboard"
 PANEL_STATIC_PATH = "/deye_sg05_mqtt/panel.js"
-PANEL_MODULE_URL = "/deye_sg05_mqtt/panel.js?v=0.5.9"
+PANEL_MODULE_URL = "/deye_sg05_mqtt/panel.js?v=0.6.0"
 PANEL_DATA_KEY = f"{DOMAIN}_panel_registered"
 
 

@@ -10,6 +10,7 @@ Custom integration for **Deye SUN-20K-SG05LP3-EU-SM2** and MQTT gateways using t
 - Built-in **Deye Dashboard** sidebar panel.
 - Version 0.5 adds a redesigned live energy-flow view with separate DC PV, Deye inverter, AC bus, load, battery, grid and GEN microinverter nodes.
 - Grid direction is shown as import/export from signed power.
+- Three-segment L1/L2/L3 grid indicator, phase-loss binary sensors and Home Assistant notifications.
 - Multiple gateways are selectable by MQTT ID.
 - One-click Energy Dashboard setup for grid, DC PV, GEN microinverter and battery.
 

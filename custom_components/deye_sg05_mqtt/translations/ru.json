@@ -35,6 +35,12 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "grid_phase_l1_missing": {"name": "Отсутствует фаза L1"},
+      "grid_phase_l2_missing": {"name": "Отсутствует фаза L2"},
+      "grid_phase_l3_missing": {"name": "Отсутствует фаза L3"},
+      "grid_any_phase_missing": {"name": "Отсутствует фаза сети"}
+    },
     "sensor": {
       "battery_input_count": {"name": "Число батарейных входов"},
       "gen_port_mode": {"name": "Режим GEN-порта"},

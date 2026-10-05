@@ -297,7 +297,12 @@ class DeyeSg05Panel extends HTMLElement {
             <div
               class="cloud-circle grid-circle ${this._gridPhaseClass(idx, "l1")} ${this._gridPhaseClass(idx, "l2")} ${this._gridPhaseClass(idx, "l3")}"
               title="L1: ${this._value(idx, "grid_l1_v")} · L2: ${this._value(idx, "grid_l2_v")} · L3: ${this._value(idx, "grid_l3_v")}"
-            ><span>🌐</span></div>
+            >
+              <span class="grid-icon">🌐</span>
+              <span class="phase-label phase-label-l1" title="L1: ${this._value(idx, "grid_l1_v")}">L1</span>
+              <span class="phase-label phase-label-l2" title="L2: ${this._value(idx, "grid_l2_v")}">L2</span>
+              <span class="phase-label phase-label-l3" title="L3: ${this._value(idx, "grid_l3_v")}">L3</span>
+            </div>
             <div class="cloud-label">Сеть</div>
             <div class="cloud-value">${this._formatW(grid)}</div>
             <div class="cloud-sub">${gridState}</div>
@@ -812,7 +817,19 @@ class DeyeSg05Panel extends HTMLElement {
         border-radius:50%;
         background:var(--card-background-color,#fff);
       }
-      .grid-circle span { position:relative; z-index:1; }
+      .grid-icon { position:relative; z-index:1; }
+      .grid-circle .phase-label {
+        position:absolute;
+        z-index:2;
+        font-size:8px;
+        line-height:1;
+        font-weight:900;
+        color:var(--primary-text-color,#263238);
+        text-shadow:0 1px 2px var(--card-background-color,#fff);
+      }
+      .phase-label-l1 { top:9px; right:8px; }
+      .phase-label-l2 { bottom:5px; left:50%; transform:translateX(-50%); }
+      .phase-label-l3 { top:9px; left:8px; }
       .grid-circle.phase-l1-missing { --grid-l1:#ef5350; }
       .grid-circle.phase-l2-missing { --grid-l2:#ef5350; }
       .grid-circle.phase-l3-missing { --grid-l3:#ef5350; }

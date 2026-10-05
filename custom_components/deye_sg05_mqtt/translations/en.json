@@ -35,6 +35,12 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "grid_phase_l1_missing": {"name": "Grid phase L1 missing"},
+      "grid_phase_l2_missing": {"name": "Grid phase L2 missing"},
+      "grid_phase_l3_missing": {"name": "Grid phase L3 missing"},
+      "grid_any_phase_missing": {"name": "Grid phase missing"}
+    },
     "sensor": {
       "battery_input_count": {"name": "Battery input count"},
       "gen_port_mode": {"name": "GEN port mode"},
